@@ -187,7 +187,7 @@ verticalReader :: forall t m . AppMonad t m
   -> Event t ()
   -> (ReaderDocumentData)
   -> AppMonadT t m ()
-verticalReader rs eh fullScrEv (docId, _, startParaMaybe, endParaNum, annText) = do
+verticalReader rs eh fullScrEv readerDocumentData = do
   (evVisible, action) <- newTriggerEvent
 
   visDyn <- holdDyn (0,Nothing) evVisible
@@ -196,6 +196,10 @@ verticalReader rs eh fullScrEv (docId, _, startParaMaybe, endParaNum, annText) =
 #endif
 
   let
+    docId = _readerDocumentData_id readerDocumentData
+    startParaMaybe = _readerDocumentData_pg readerDocumentData
+    endParaNum = _readerDocumentData_totalParaNum readerDocumentData
+    annText = _readerDocumentData_slice readerDocumentData
     divAttr' = (\rs1 fs -> ("class" =: "col-xs-10") <> ("style" =:
       ("font-size: " <> tshow (_fontSize rs1) <>"%;"
         <> "line-height: " <> tshow (_lineHeight rs1) <> "%;"
@@ -385,6 +389,23 @@ verticalReader rs eh fullScrEv (docId, _, startParaMaybe, endParaNum, annText) =
           return (domEvent Click e, cEv)
 
         let
+          lastParaNumOfCurrentPage :: Dynamic t Int = unParaNum <$> (fst <$> lastDisplayedPara)
+
+          totalParaNum :: Int = endParaNum
+
+          showDocProgressWidget :: Dynamic t Int -> Int -> AppMonadT t m ()
+          showDocProgressWidget current total = do
+            let
+              progressBarAttrMap = (\(c, t) -> (("value" =: c) <>  ("max" =: t) <> ("class" =: "col-sm-12"))) <$> progressDataInTextFormat
+              progressDataInTextFormat :: Dynamic t (Text, Text) = (\(x, y) -> (tshow x, tshow y)) <$> progressData
+              progressData :: Dynamic t (Int, Int)= (\x -> (x,total)) <$> current
+
+            elDynAttr "progress" progressBarAttrMap $ return()
+            return ()
+
+        showDocProgressWidget lastParaNumOfCurrentPage totalParaNum
+
+        let
           -- The button on left is next in vertical and prev in horizontal
           next1 = switch . current $ ffor (_verticalMode <$> rs) $ \v -> if v
             then leftEv else rightEv
@@ -454,11 +475,13 @@ fetchMoreContentF docId annText endParaNum pageChangeEv = do
           | f > 0 && d == BackwardGrow && (n - f < 30) = Just (max 0 (f - 60))
           | otherwise = Nothing
 
-    moreContentEv <- getWebSocketResponse $
+    (moreContentEv :: (Event t (Maybe ReaderDocumentData)))<- getWebSocketResponse $
       (\p -> ViewDocument docId (Just p)) <$> (leftmost [hitEndEv, hitStartEv])
 
-    textContent <- foldDyn moreContentAccF annText ((\(_,_,_,_,c) -> c) <$>
-                                    (fmapMaybe identity moreContentEv))
+    let isJustMoreContentEv = fmapMaybe identity moreContentEv
+        sliceEv = (\p -> _readerDocumentData_slice p) <$> isJustMoreContentEv
+
+    textContent <- foldDyn moreContentAccF annText sliceEv
 
 #if defined (DEBUG)
   -- text "("

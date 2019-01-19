@@ -286,7 +286,7 @@ addEditNewDocumentCommon dId docContent = do
 
   ret <- transactSrsDB $ runStateWithNothing $ upFun
 
-  ret & _Just . _5 . each . _2 %%~ fixFuriganaVisibility
+  ret & _Just . readerDocumentData_slice . each . _2 %%~ fixFuriganaVisibility
 
 getQuickAnalyzeText :: QuickAnalyzeText
   -> WsHandlerM [(Int, AnnotatedPara)]
@@ -352,7 +352,7 @@ getViewDocument (ViewDocument i paraNum) = do
     ret :: Maybe ReaderDocumentData
     ret = flip (getReaderDocumentData booksDb articlesDb) paraNum <$> s
 
-  ret & _Just . _5 . each . _2 %%~ fixFuriganaVisibility
+  ret & _Just . readerDocumentData_slice . each . _2 %%~ fixFuriganaVisibility
 
 getViewDocument req = do
   rs <- transactReadOnlySrsDB $ \rd ->
@@ -376,10 +376,15 @@ getReaderDocumentData
   -> Array ArticleId (Text, AnnotatedDocument)
   -> ReaderDocumentTree t0
   -> Maybe Int
-  -> (ReaderDocumentId, Text, (Int, Maybe Int), Int,
-       [(Int, AnnotatedPara)])
-getReaderDocumentData booksDb articlesDb r paraNum =
-  (r ^. readerDocId, title, pg, endParaNum, slice)
+  -> ReaderDocumentData 
+getReaderDocumentData booksDb articlesDb r paraNum = 
+  ReaderDocumentData 
+    {_readerDocumentData_id = r ^. readerDocId,
+     _readerDocumentData_title = title,
+     _readerDocumentData_pg = pg,
+     _readerDocumentData_totalParaNum = endParaNum,
+     _readerDocumentData_slice = slice}
+--  (r ^. readerDocId, title, pg, endParaNum, slice)
   where
     (title, c) = case r ^. readerDoc of
       (MyDocument t c') -> (t,c')

@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Message
   where
 
@@ -326,9 +327,13 @@ data ViewDocument
 instance WebSocketMessage AppRequest ViewDocument where
   type ResponseT AppRequest ViewDocument = (Maybe (ReaderDocumentData))
 
-type ReaderDocumentData =
-  (ReaderDocumentId, Text, (Int, Maybe Int), Int
-   , [(Int, AnnotatedPara)])
+data ReaderDocumentData = ReaderDocumentData
+  { _readerDocumentData_id             :: ReaderDocumentId
+  , _readerDocumentData_title	       :: Text
+  , _readerDocumentData_pg             :: (Int, Maybe Int)
+  , _readerDocumentData_totalParaNum   :: Int
+  , _readerDocumentData_slice          :: [(Int, AnnotatedPara)]
+  } deriving (Generic, Show, ToJSON, FromJSON)
 
 ----------------------------------------------------------------
 data ViewRawDocument = ViewRawDocument ReaderDocumentId
@@ -447,6 +452,8 @@ instance WebSocketMessage AppRequest ImportData where
   type ResponseT AppRequest ImportData = ()
 
 ----------------------------------------------------------------
+makeLenses ''ReaderDocumentData
+
 -- makeLenses ''ReviewItem
 reviewItemField :: Lens' ReviewItem SrsEntryField
 reviewItemField
