@@ -389,21 +389,25 @@ verticalReader rs eh fullScrEv readerDocumentData = do
           return (domEvent Click e, cEv)
 
         let
-          lastParaNumOfCurrentPage :: Dynamic t Int = unParaNum <$> (fst <$> lastDisplayedPara)
+          lastParaNumOfCurrentPage :: Dynamic t ParaNum = fst <$> lastDisplayedPara
+          isVerticalMode :: Dynamic t Bool = _verticalMode <$> rs
 
-          totalParaNum :: Int = endParaNum
 
-          showDocProgressWidget :: Dynamic t Int -> Int -> AppMonadT t m ()
-          showDocProgressWidget current total = do
+          showDocProgressWidget :: Dynamic t ParaNum -> Dynamic t Bool -> AppMonadT t m ()
+          showDocProgressWidget c v = do
             let
-              progressBarAttrMap = (\(c, t) -> (("value" =: c) <>  ("max" =: t) <> ("class" =: "col-sm-12"))) <$> progressDataInTextFormat
-              progressDataInTextFormat :: Dynamic t (Text, Text) = (\(x, y) -> (tshow x, tshow y)) <$> progressData
-              progressData :: Dynamic t (Int, Int)= (\x -> (x,total)) <$> current
+	      attrMapDynamicValues :: Dynamic t (ParaNum, Bool) = zipDyn c v
+              attrMap = (\(c, v) -> 
+                          if v 
+                          then (("class" =: "rotate-by-180 col-sm-12") <> ("value" =: (tshow . unParaNum $ c)) <>  ("max" =: (tshow totalParaNum))) 
+                          else (("class" =: "col-sm-12") <> ("value" =: (tshow . unParaNum $ c)) <>  ("max" =: (tshow totalParaNum)))) 
+                        <$> attrMapDynamicValues 
+              totalParaNum = endParaNum
 
-            elDynAttr "progress" progressBarAttrMap $ return()
+            elDynAttr "progress" attrMap $ return()
             return ()
 
-        showDocProgressWidget lastParaNumOfCurrentPage totalParaNum
+        showDocProgressWidget lastParaNumOfCurrentPage isVerticalMode
 
         let
           -- The button on left is next in vertical and prev in horizontal
@@ -478,8 +482,7 @@ fetchMoreContentF docId annText endParaNum pageChangeEv = do
     (moreContentEv :: (Event t (Maybe ReaderDocumentData)))<- getWebSocketResponse $
       (\p -> ViewDocument docId (Just p)) <$> (leftmost [hitEndEv, hitStartEv])
 
-    let isJustMoreContentEv = fmapMaybe identity moreContentEv
-        sliceEv = (\p -> _readerDocumentData_slice p) <$> isJustMoreContentEv
+    let sliceEv = fmapMaybe (fmap _readerDocumentData_slice) moreContentEv
 
     textContent <- foldDyn moreContentAccF annText sliceEv
 
