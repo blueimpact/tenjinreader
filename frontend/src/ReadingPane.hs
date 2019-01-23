@@ -391,23 +391,27 @@ verticalReader rs eh fullScrEv readerDocumentData = do
         let
           lastParaNumOfCurrentPage :: Dynamic t ParaNum = fst <$> lastDisplayedPara
           isVerticalMode :: Dynamic t Bool = _verticalMode <$> rs
+          isFullScreenMode :: Dynamic t Bool = fullscreenDyn
 
-
-          showDocProgressWidget :: Dynamic t ParaNum -> Dynamic t Bool -> AppMonadT t m ()
-          showDocProgressWidget c v = do
+          --showDocProgress :: DomBuilder t m1 => Dynamic t ParaNum -> Dynamic t Bool -> m1 ()
+          showDocProgressIfNotFullScreen c v f = do
             let
-	      attrMapDynamicValues :: Dynamic t (ParaNum, Bool) = zipDyn c v
-              attrMap = (\(c, v) -> 
-                          if v 
-                          then (("class" =: "rotate-by-180 col-sm-12") <> ("value" =: (tshow . unParaNum $ c)) <>  ("max" =: (tshow totalParaNum))) 
-                          else (("class" =: "col-sm-12") <> ("value" =: (tshow . unParaNum $ c)) <>  ("max" =: (tshow totalParaNum)))) 
-                        <$> attrMapDynamicValues 
-              totalParaNum = endParaNum
-
+              tmp :: Dynamic t (ParaNum, Bool) = zipDyn c v
+              attrMapDynamicValues :: Dynamic t ((ParaNum, Bool), Bool) = zipDyn tmp f
+              attrMap = getAttrMap <$> attrMapDynamicValues
             elDynAttr "progress" attrMap $ return()
-            return ()
+     
+          getAttrMap :: ((ParaNum, Bool), Bool) -> Map Text Text
+          getAttrMap ((c, v), f) = do
+            let
+              attrMap = ("value" =: (tshow . unParaNum $ c)) <> ("max" =: (tshow totalParaNum)) <>
+                        ("class" =: (rotateBy180OrNot<>" "<>"col-sm-12")) <> ("style" =: ("visibility: "<>visibleOrNot))
+              totalParaNum = endParaNum
+              rotateBy180OrNot = if v then "rotate-by-180" else ""
+              visibleOrNot = if f then "hidden" else "visible"
+            attrMap
 
-        showDocProgressWidget lastParaNumOfCurrentPage isVerticalMode
+        showDocProgressIfNotFullScreen lastParaNumOfCurrentPage isVerticalMode isFullScreenMode
 
         let
           -- The button on left is next in vertical and prev in horizontal
