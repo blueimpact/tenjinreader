@@ -187,7 +187,7 @@ verticalReader :: forall t m . AppMonad t m
   -> Event t ()
   -> (ReaderDocumentData)
   -> AppMonadT t m ()
-verticalReader rs eh fullScrEv (docId, _, startParaMaybe, endParaNum, annText) = do
+verticalReader rs eh fullScrEv readerDocumentData = do
   (evVisible, action) <- newTriggerEvent
 
   visDyn <- holdDyn (0,Nothing) evVisible
@@ -196,6 +196,10 @@ verticalReader rs eh fullScrEv (docId, _, startParaMaybe, endParaNum, annText) =
 #endif
 
   let
+    docId = _readerDocumentData_id readerDocumentData
+    startParaMaybe = _readerDocumentData_pg readerDocumentData
+    endParaNum = _readerDocumentData_totalParaNum readerDocumentData
+    annText = _readerDocumentData_slice readerDocumentData
     divAttr' = (\rs1 fs -> ("class" =: "col-xs-10") <> ("style" =:
       ("font-size: " <> tshow (_fontSize rs1) <>"%;"
         <> "line-height: " <> tshow (_lineHeight rs1) <> "%;"
@@ -385,6 +389,31 @@ verticalReader rs eh fullScrEv (docId, _, startParaMaybe, endParaNum, annText) =
           return (domEvent Click e, cEv)
 
         let
+          lastParaNumOfCurrentPage :: Dynamic t ParaNum = fst <$> lastDisplayedPara
+          isVerticalMode :: Dynamic t Bool = _verticalMode <$> rs
+          isFullScreenMode :: Dynamic t Bool = fullscreenDyn
+
+          --showDocProgress :: DomBuilder t m1 => Dynamic t ParaNum -> Dynamic t Bool -> m1 ()
+          showDocProgressIfNotFullScreen c v f = do
+            let
+              tmp :: Dynamic t (ParaNum, Bool) = zipDyn c v
+              attrMapDynamicValues :: Dynamic t ((ParaNum, Bool), Bool) = zipDyn tmp f
+              attrMap = getAttrMap <$> attrMapDynamicValues
+            elDynAttr "progress" attrMap $ return()
+     
+          getAttrMap :: ((ParaNum, Bool), Bool) -> Map Text Text
+          getAttrMap ((c, v), f) = do
+            let
+              attrMap = ("value" =: (tshow . unParaNum $ c)) <> ("max" =: (tshow totalParaNum)) <>
+                        ("class" =: (rotateBy180OrNot<>" "<>"col-sm-12")) <> ("style" =: ("visibility: "<>visibleOrNot))
+              totalParaNum = endParaNum
+              rotateBy180OrNot = if v then "rotate-by-180" else ""
+              visibleOrNot = if f then "hidden" else "visible"
+            attrMap
+
+        showDocProgressIfNotFullScreen lastParaNumOfCurrentPage isVerticalMode isFullScreenMode
+
+        let
           -- The button on left is next in vertical and prev in horizontal
           next1 = switch . current $ ffor (_verticalMode <$> rs) $ \v -> if v
             then leftEv else rightEv
@@ -454,11 +483,12 @@ fetchMoreContentF docId annText endParaNum pageChangeEv = do
           | f > 0 && d == BackwardGrow && (n - f < 30) = Just (max 0 (f - 60))
           | otherwise = Nothing
 
-    moreContentEv <- getWebSocketResponse $
+    (moreContentEv :: (Event t (Maybe ReaderDocumentData)))<- getWebSocketResponse $
       (\p -> ViewDocument docId (Just p)) <$> (leftmost [hitEndEv, hitStartEv])
 
-    textContent <- foldDyn moreContentAccF annText ((\(_,_,_,_,c) -> c) <$>
-                                    (fmapMaybe identity moreContentEv))
+    let sliceEv = fmapMaybe (fmap _readerDocumentData_slice) moreContentEv
+
+    textContent <- foldDyn moreContentAccF annText sliceEv
 
 #if defined (DEBUG)
   -- text "("
