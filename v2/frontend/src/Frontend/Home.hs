@@ -41,9 +41,12 @@ home
 home = do
   divClass "tile is-ancestor" $ do
     divClass "tile is-vertical" $ do
-      divClass "tile" $ do
-        divClass "tile is-parent is-vertical" $ do
-          elClass "article" "tile is-child" $ randomSentenceWidget
+      divClass "tile is-parent" $ do
+        elClass "article" "tile is-child is-10" $ randomSentenceWidget
+        divClass "tile is-child" $ do
+          divClass "tile is-parent is-vertical" $ do
+            divClass "tile is-child" $ btnIcon "is-fullwidth" "fa-random" (Just "Random sentence")
+            divClass "tile is-child" $ btnIcon "is-fullwidth" "fa-random" (Just "Random sentence")
       divClass "tile is-parent" $ do
         elClass "article" "tile is-child is-8" $ recentBookList
         elClass "article" "tile is-child" $ divClassT "box" $ recentWordList
