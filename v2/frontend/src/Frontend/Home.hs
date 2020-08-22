@@ -96,9 +96,10 @@ recentBookList = do
     widgetHold blank $ ffor openEv $ \_ -> do
       divClass "card-content" $ do
         divClass "content" $ text "彼《かれ》は現代生活《げんだいせいかつ》の複雑性《ふくざつせい》について長々《ながなが》と話《はな》した。"
-        divClass "level" $ do
+        divClass "level is-mobile" $ do
           divClass "level-left" $ blank
           divClass "level-right" $ do
+            divClass "level-item" $ text "27%"
             divClass "level-item" $ btn "is-small" "Open" Nothing
             divClass "level-item" $ btn "is-small" "Edit" Nothing
             divClass "level-item" $ btn "is-small" "Delete" Nothing
