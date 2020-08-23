@@ -134,4 +134,10 @@ recentWordList = do
     let openEv = domEvent Click e
     widgetHold blank $ ffor openEv $ \_ -> do
       divClass "card-content" $ do
-        divClass "content" $ text "彼《かれ》は現代生活《げんだいせいかつ》の複雑性《ふくざつせい》について長々《ながなが》と話《はな》した。"
+        divClass "content" $ do
+          divClass "" $ text "距離, きょり"
+          divClass "" $ text "(Noun) Distance, Range"
+      elClass "footer" "card-footer" $ do
+            elClass "a" "card-footer-item" $ text "Edit SRS"
+            elClass "a" "card-footer-item" $ text "Sentences"
+            return()
