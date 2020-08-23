@@ -42,7 +42,7 @@ home = do
   divClass "tile is-ancestor" $ do
     divClass "tile is-vertical" $ do
       divClass "tile is-parent" $ do
-        elClass "article" "tile is-child is-10" $ randomSentenceWidget
+        elClass "article" "tile is-child is-11" $ randomSentenceWidget
         divClass "tile is-child" $ do
           divClass "tile is-parent is-vertical" $ do
             divClass "tile is-child" $ btnIcon "is-fullwidth is-size-5-tablet" "fa-random" (Just "Random sentence")
